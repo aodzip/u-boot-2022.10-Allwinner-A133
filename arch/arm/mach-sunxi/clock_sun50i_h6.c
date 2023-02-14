@@ -12,7 +12,7 @@ void clock_init_safe(void)
 	struct sunxi_prcm_reg *const prcm =
 		(struct sunxi_prcm_reg *)SUNXI_PRCM_BASE;
 
-	if (IS_ENABLED(CONFIG_MACH_SUN50I_H616)) {
+	if (IS_ENABLED(CONFIG_MACH_SUN50I_H616) || IS_ENABLED(CONFIG_MACH_SUN50I_A133)) {
 		/* this seems to enable PLLs on H616 */
 		setbits_le32(&prcm->sys_pwroff_gating, 0x10);
 		setbits_le32(&prcm->res_cal_ctrl, 2);
@@ -87,7 +87,7 @@ void clock_set_pll1(unsigned int clk)
 
 	/* clk = 24*n/p, p is ignored if clock is >288MHz */
 	writel(CCM_PLL1_CTRL_EN | CCM_PLL1_LOCK_EN | CCM_PLL1_CLOCK_TIME_2 |
-#ifdef CONFIG_MACH_SUN50I_H616
+#if (defined(CONFIG_MACH_SUN50I_H616) || defined(CONFIG_MACH_SUN50I_A133))
 	       CCM_PLL1_OUT_EN |
 #endif
 	       CCM_PLL1_CTRL_N(clk / 24000000), &ccm->pll1_cfg);

@@ -19,5 +19,6 @@
 #define SOCID_V3S	0x1681
 #define SOCID_H5	0x1718
 #define SOCID_R40	0x1701
+#define SOCID_A133	0x1855
 
 #endif /* _SUNXI_CPU_H */

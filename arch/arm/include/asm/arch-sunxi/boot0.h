@@ -41,6 +41,8 @@
 	.word	0xeafffffd	// b       @wfi
 #ifndef CONFIG_SUN50I_GEN_H6
 	.word	0x017000a0	// writeable RVBAR mapping address
+#elif defined(CONFIG_MACH_SUN50I_A133)
+	.word	0x08100040	// writeable RVBAR mapping address
 #else
 	.word	0x09010040	// writeable RVBAR mapping address
 #endif
