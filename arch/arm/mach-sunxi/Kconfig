@@ -85,6 +85,52 @@ config DRAM_SUN50I_H616_UNKNOWN_FEATURE
 	  feature.
 endif
 
+config DRAM_SUN50I_A133
+	bool
+	help
+	  Select this dram controller driver for some sun50i platforms,
+	  like A133.
+
+if DRAM_SUN50I_A133
+config DRAM_SUN50I_A133_WRITE_LEVELING
+	bool "A133 DRAM write leveling"
+	---help---
+	  Select this when DRAM on your A133 board needs write leveling.
+
+config DRAM_SUN50I_A133_READ_CALIBRATION
+	bool "A133 DRAM read calibration"
+	---help---
+	  Select this when DRAM on your A133 board needs read calibration.
+
+config DRAM_SUN50I_A133_READ_TRAINING
+	bool "A133 DRAM read training"
+	---help---
+	  Select this when DRAM on your A133 board needs read training.
+
+config DRAM_SUN50I_A133_WRITE_TRAINING
+	bool "A133 DRAM write training"
+	---help---
+	  Select this when DRAM on your A133 board needs write training.
+
+config DRAM_SUN50I_A133_DX_BIT_DELAY_COMPENSATION
+	bool "A133 DRAM DX bit delay compensation"
+	---help---
+	  Select this when DRAM on your A133 board needs dx bit delay
+	  compensation.
+
+config DRAM_SUN50I_A133_CA_BIT_DELAY_COMPENSATION
+	bool "A133 DRAM CA bit delay compensation"
+	---help---
+	  Select this when DRAM on your A133 board needs ca bit delay
+	  compensation.
+
+config DRAM_SUN50I_A133_DELAY_ON_PHY_CONFIG
+	bool "A133 DRAM additional delay on phy config"
+	---help---
+	  Select this when DRAM on your A133 board needs additional
+	  delay on phy config, depends on tpr13 BIT(4).
+endif
+
 config SUN6I_PRCM
 	bool
 	help
@@ -362,7 +408,7 @@ config MACH_SUN50I_H616
 config MACH_SUN50I_A133
 	bool "sun50i (Allwinner A133)"
 	select ARM64
-	select DRAM_SUN50I_H616
+	select DRAM_SUN50I_A133
 	select SUN50I_GEN_H6
 
 endchoice
@@ -410,6 +456,9 @@ config SUNXI_DRAM_DDR2
 	bool
 
 config SUNXI_DRAM_LPDDR3
+	bool
+
+config SUNXI_DRAM_LPDDR4
 	bool
 
 choice

@@ -316,6 +316,9 @@ struct sunxi_ccm_reg {
 #define GATE_SHIFT			(0)
 
 /* DRAM clock bit field */
+#ifdef CONFIG_MACH_SUN50I_A133
+#define DRAM_CLK_ENABLE			BIT(31)
+#endif
 #define DRAM_MOD_RESET			BIT(30)
 #define DRAM_CLK_UPDATE			BIT(27)
 #define DRAM_CLK_SRC_MASK		GENMASK(25, 24)
