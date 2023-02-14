@@ -117,6 +117,7 @@ static void mctl_sys_init(struct dram_para *para)
 	/* Set PLL5 rate to doubled DRAM clock rate */
 	writel(CCM_PLL5_CTRL_EN | CCM_PLL5_LOCK_EN | CCM_PLL5_OUT_EN |
 	       CCM_PLL5_CTRL_N(para->clk * 2 / 24), &ccm->pll5_cfg);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&ccm->pll5_cfg, CCM_PLL5_LOCK, CCM_PLL5_LOCK);
 
 	/* Configure DRAM mod clock */
@@ -348,10 +349,94 @@ static void mctl_phy_configure_odt(struct dram_para *para)
 }
 
 static void mctl_phy_ca_bit_delay_compensation(struct dram_para *para) {
-	u32 val;
+	u32 *ptr;
+	u32 i, a, b, c, d;
 	u32 dram_tpr10, dram_tpr0;
 
-	
+	switch (para->type) {
+	case SUNXI_DRAM_TYPE_DDR3: // TODO
+		dram_tpr10 = 0;
+		dram_tpr0 = 0;
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR3:
+		dram_tpr10 = 0x002f876b;
+		dram_tpr0 = 0x0;
+		break;
+	case SUNXI_DRAM_TYPE_DDR4: // TODO
+		dram_tpr10 = 0;
+		dram_tpr0 = 0;
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR4: // TODO
+		dram_tpr10 = 0;
+		dram_tpr0 = 0;
+		break;
+	}
+
+	if (dram_tpr10 >= 0) { // Sorry for direct copy from decompiler
+		dram_tpr0 = ((32 * dram_tpr10) & 0x1E00) | ((dram_tpr10 << 9) & 0x1E0000) | ((2 * dram_tpr10) & 0x1E) | ((dram_tpr10 << 13) & 0x1E000000);
+		if(dram_tpr10 >> 29)
+			dram_tpr0 *= 2;
+	}
+
+	ptr = (u32*)(SUNXI_DRAM_PHY0_BASE + 0x780);
+	for (i = 0; i < 32; i++) {
+		writel((dram_tpr0 >> 8) & 0x3F, ptr);
+		ptr += 4;
+	}
+
+	a = dram_tpr0 & 0x3f;
+	b = dram_tpr0 & 0x3f;
+	c = (dram_tpr0 >> 16) & 0x3f;
+	d = (dram_tpr0 >> 24) & 0x3f;
+
+	switch (readl(SUNXI_SID_BASE)) { // Seems like allwinner fab factory change
+	case 0x800:
+	case 0x2400:
+		switch (para->type) {
+		case SUNXI_DRAM_TYPE_DDR3:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x7e4);
+			writel(d, SUNXI_DRAM_PHY0_BASE + 0x2388); // ??? WTF
+			break;
+		case SUNXI_DRAM_TYPE_LPDDR4:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x7e4);
+			writel(d, SUNXI_DRAM_PHY0_BASE + 0x790);
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		switch (para->type) {
+		case SUNXI_DRAM_TYPE_DDR3:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x7b8);
+			writel(d, SUNXI_DRAM_PHY0_BASE + 0x784);
+			break;
+		case SUNXI_DRAM_TYPE_LPDDR3:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x788);
+			writel(d, SUNXI_DRAM_PHY0_BASE + 0x790);
+			break;
+		case SUNXI_DRAM_TYPE_DDR4:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x784);
+			break;
+		case SUNXI_DRAM_TYPE_LPDDR4:
+			writel(a, SUNXI_DRAM_PHY0_BASE + 0x7dc);
+			writel(b, SUNXI_DRAM_PHY0_BASE + 0x7e0);
+			writel(c, SUNXI_DRAM_PHY0_BASE + 0x790);
+			writel(d, SUNXI_DRAM_PHY0_BASE + 0x78c);
+			break;
+		}
+		break;
+	}
 }
 
 static bool mctl_phy_write_leveling(struct dram_para *para)
@@ -370,6 +455,7 @@ static bool mctl_phy_write_leveling(struct dram_para *para)
 	else
 		val = 3;
 
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x188), val, val);
 
 	clrbits_le32(SUNXI_DRAM_PHY0_BASE + 8, 4);
@@ -399,6 +485,7 @@ static bool mctl_phy_write_leveling(struct dram_para *para)
 		else
 			val = 3;
 
+		printf("line: %d\n", __LINE__);
 		mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x188), val, val);
 
 		clrbits_le32(SUNXI_DRAM_PHY0_BASE + 8, 4);
@@ -483,11 +570,13 @@ static bool mctl_phy_read_training(struct dram_para *para)
 	setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 6);
 	setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 1);
 
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x840), 0xc, 0xc);
 	if (readl(SUNXI_DRAM_PHY0_BASE + 0x840) & 3)
 		result = false;
 
 	if (para->bus_full_width) {
+		printf("line: %d\n", __LINE__);
 		mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0xa40), 0xc, 0xc);
 		if (readl(SUNXI_DRAM_PHY0_BASE + 0xa40) & 3)
 			result = false;
@@ -539,11 +628,13 @@ static bool mctl_phy_read_training(struct dram_para *para)
 		setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 6);
 		setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 1);
 
+		printf("line: %d\n", __LINE__);
 		mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x840), 0xc, 0xc);
 		if (readl(SUNXI_DRAM_PHY0_BASE + 0x840) & 3)
 			result = false;
 
 		if (para->bus_full_width) {
+			printf("line: %d\n", __LINE__);
 			mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0xa40), 0xc, 0xc);
 			if (readl(SUNXI_DRAM_PHY0_BASE + 0xa40) & 3)
 				result = false;
@@ -573,11 +664,13 @@ static bool mctl_phy_write_training(struct dram_para *para)
 	setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 0x10);
 	setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 0x20);
 
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x8e0), 3, 3);
 	if (readl(SUNXI_DRAM_PHY0_BASE + 0x8e0) & 0xc)
 		result = false;
 
 	if (para->bus_full_width) {
+		printf("line: %d\n", __LINE__);
 		mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0xae0), 3, 3);
 		if (readl(SUNXI_DRAM_PHY0_BASE + 0xae0) & 0xc)
 			result = false;
@@ -627,11 +720,13 @@ static bool mctl_phy_write_training(struct dram_para *para)
 		setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 0x10);
 		setbits_le32(SUNXI_DRAM_PHY0_BASE + 0x190, 0x20);
 
+		printf("line: %d\n", __LINE__);
 		mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x8e0), 3, 3);
 		if (readl(SUNXI_DRAM_PHY0_BASE + 0x8e0) & 0xc)
 			result = false;
 
 		if (para->bus_full_width) {
+			printf("line: %d\n", __LINE__);
 			mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0xae0), 3, 3);
 			if (readl(SUNXI_DRAM_PHY0_BASE + 0xae0) & 0xc)
 				result = false;
@@ -645,7 +740,7 @@ static bool mctl_phy_write_training(struct dram_para *para)
 	return result;
 }
 
-static bool mctl_phy_bit_delay_compensation(struct dram_para *para)
+static bool mctl_phy_dx_bit_delay_compensation(struct dram_para *para)
 {
 	u32 *ptr;
 	int i;
@@ -971,6 +1066,7 @@ static bool mctl_phy_init(struct dram_para *para)
 	udelay(1);
 	clrbits_le32(SUNXI_DRAM_PHY0_BASE + 0x14c, 8);
 
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion((u32*)(SUNXI_DRAM_PHY0_BASE + 0x180), 4, 4);
 
 	if (IS_ENABLED(DRAM_SUN50I_A133_DELAY_ON_PHY_CONFIG)) {
@@ -981,54 +1077,99 @@ static bool mctl_phy_init(struct dram_para *para)
 	setbits_le32(&prcm->sys_pwroff_gating, BIT(4));
 	/* end phy_para_config */
 
-	clrbits_le32(&mctl_com->unk_0x500, 0x200);
+	/* begin mctl_dfi_init */
+	setbits_le32(&mctl_com->maer0, 0x100);
 
-	writel(0, &mctl_ctl->swctl);
 	setbits_le32(&mctl_ctl->dfimisc, 1);
-
-	/* start DFI init */
 	setbits_le32(&mctl_ctl->dfimisc, 0x20);
 	writel(1, &mctl_ctl->swctl);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&mctl_ctl->swstat, 1, 1);
-	/* poll DFI init complete */
-	mctl_await_completion(&mctl_ctl->dfistat, 1, 1);
-	writel(0, &mctl_ctl->swctl);
+
 	clrbits_le32(&mctl_ctl->dfimisc, 0x20);
+	writel(1, &mctl_ctl->swctl);
+	printf("line: %d\n", __LINE__);
+	mctl_await_completion(&mctl_ctl->swstat, 1, 1);
+	printf("line: %d\n", __LINE__);
+	mctl_await_completion(&mctl_ctl->dfistat, 1, 1);
 
 	clrbits_le32(&mctl_ctl->pwrctl, 0x20);
 	writel(1, &mctl_ctl->swctl);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&mctl_ctl->swstat, 1, 1);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&mctl_ctl->statr, 3, 1);
 
-	writel(0, &mctl_ctl->swctl);
+	if (IS_ENABLED(DRAM_SUN50I_A133_DELAY_ON_PHY_CONFIG)) {
+		udelay(200);
+	}
+
 	clrbits_le32(&mctl_ctl->dfimisc, 1);
 
 	writel(1, &mctl_ctl->swctl);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&mctl_ctl->swstat, 1, 1);
+	//OK
 
-	writel(0x1f14, &mctl_ctl->mrctrl1);
-	writel(0x80000030, &mctl_ctl->mrctrl0);
-	mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+	switch (para->type) {
+	case SUNXI_DRAM_TYPE_DDR3:
+		writel(0x1f14, &mctl_ctl->mrctrl1); // dram_mr0
+		writel(0x80000030, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
 
-	writel(4, &mctl_ctl->mrctrl1);
-	writel(0x80001030, &mctl_ctl->mrctrl0);
-	mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+		writel(4, &mctl_ctl->mrctrl1); // dram_mr1
+		writel(0x80001030, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
 
-	writel(0x20, &mctl_ctl->mrctrl1);
-	writel(0x80002030, &mctl_ctl->mrctrl0);
-	mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+		writel(0x20, &mctl_ctl->mrctrl1); // dram_mr2
+		writel(0x80002030, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
 
-	writel(0, &mctl_ctl->mrctrl1);
-	writel(0x80003030, &mctl_ctl->mrctrl0);
-	mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+		writel(0, &mctl_ctl->mrctrl1); // dram_mr3
+		writel(0x80003030, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR3:
+		writel(0xc3 | 0x100, &mctl_ctl->mrctrl1); // dram_mr1
+		writel(0x800000f0, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+
+		writel(0x6 | 0x200, &mctl_ctl->mrctrl1); // dram_mr2
+		writel(0x800000f0, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+
+		writel(0x2 | 0x300, &mctl_ctl->mrctrl1); // dram_mr3
+		writel(0x800000f0, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+
+		writel(0x0 | 0xb00, &mctl_ctl->mrctrl1); // dram_mr11
+		writel(0x80000030, &mctl_ctl->mrctrl0);
+		printf("line: %d\n", __LINE__);
+		mctl_await_completion(&mctl_ctl->mrctrl0, BIT(31), 0);
+		break;
+	case SUNXI_DRAM_TYPE_DDR4: // TODO
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR4: // TODO
+		break;
+	}
 
 	writel(0, SUNXI_DRAM_PHY0_BASE + 0x54);
+
+	/* end mctl_dfi_init */
 
 	writel(0, &mctl_ctl->swctl);
 	clrbits_le32(&mctl_ctl->rfshctl3, 1);
 	writel(1, &mctl_ctl->swctl);
+	// OK
 
-	if (IS_ENABLED(CONFIG_DRAM_SUN50I_H616_WRITE_LEVELING)) {
+	if (IS_ENABLED(CONFIG_DRAM_SUN50I_A133_WRITE_LEVELING)) {
 		for (i = 0; i < 5; i++)
 			if (mctl_phy_write_leveling(para))
 				break;
@@ -1038,7 +1179,7 @@ static bool mctl_phy_init(struct dram_para *para)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_DRAM_SUN50I_H616_READ_CALIBRATION)) {
+	if (IS_ENABLED(CONFIG_DRAM_SUN50I_A133_READ_CALIBRATION)) {
 		for (i = 0; i < 5; i++)
 			if (mctl_phy_read_calibration(para))
 				break;
@@ -1048,7 +1189,7 @@ static bool mctl_phy_init(struct dram_para *para)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_DRAM_SUN50I_H616_READ_TRAINING)) {
+	if (IS_ENABLED(CONFIG_DRAM_SUN50I_A133_READ_TRAINING)) {
 		for (i = 0; i < 5; i++)
 			if (mctl_phy_read_training(para))
 				break;
@@ -1058,7 +1199,7 @@ static bool mctl_phy_init(struct dram_para *para)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_DRAM_SUN50I_H616_WRITE_TRAINING)) {
+	if (IS_ENABLED(CONFIG_DRAM_SUN50I_A133_WRITE_TRAINING)) {
 		for (i = 0; i < 5; i++)
 			if (mctl_phy_write_training(para))
 				break;
@@ -1069,7 +1210,7 @@ static bool mctl_phy_init(struct dram_para *para)
 	}
 
 	if (IS_ENABLED(DRAM_SUN50I_A133_DX_BIT_DELAY_COMPENSATION))
-		mctl_phy_bit_delay_compensation(para);
+		mctl_phy_dx_bit_delay_compensation(para);
 
 	clrbits_le32(SUNXI_DRAM_PHY0_BASE + 0x60, 4);
 
@@ -1191,9 +1332,11 @@ static bool mctl_ctrl_init(struct dram_para *para) // mctl_channel_init
 	mctl_set_addrmap(para);
 	/* end mctl_com_set_controller_address_map */
 
+	printf("line: %d\n", __LINE__);
 	/* begin mctl_com_set_channel_timing */
 	mctl_set_timing_params(para);
 	/* end mctl_com_set_channel_timing */
+	printf("line: %d\n", __LINE__);
 
 	writel(0, &mctl_ctl->pwrctl);
 
@@ -1252,6 +1395,7 @@ static bool mctl_ctrl_init(struct dram_para *para) // mctl_channel_init
 	/* end mctl_com_set_controller_refresh */
 
 	writel(1, &mctl_ctl->swctl);
+	printf("line: %d\n", __LINE__);
 	mctl_await_completion(&mctl_ctl->swstat, 1, 1);
 	/* end mctl_com_set_controller_after_phy */
 
