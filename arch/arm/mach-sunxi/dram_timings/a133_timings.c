@@ -8,21 +8,6 @@
 #define _REG(x) (*((volatile unsigned int *)(x)))
 #endif
 
-static u32 dram_mr0 = 0xFFFFFFFF;
-static u32 dram_mr1 = 0xFFFFFFFF;
-static u32 dram_mr2 = 0xFFFFFFFF;
-static u32 dram_mr3 = 0xFFFFFFFF;
-static u32 dram_mr4 = 0xFFFFFFFF;
-static u32 dram_mr5 = 0xFFFFFFFF;
-static u32 dram_mr6 = 0xFFFFFFFF;
-static u32 dram_mr11 = 0xFFFFFFFF;
-static u32 dram_mr12 = 0xFFFFFFFF;
-static u32 dram_mr14 = 0xFFFFFFFF;
-static u32 dram_mr22 = 0xFFFFFFFF;
-
-static u32 dram_tpr2 = 0xFFFFFFFF;
-static u32 dram_tpr13 = 0xFFFFFFFF;
-
 static unsigned int auto_cal_timing(int a1, int a2)
 {
   unsigned int v2; // r4
@@ -142,23 +127,20 @@ void mctl_set_timing_params(struct dram_para *para)
   v43 = 1;
   v44 = 1;
 
-  printf("line: %d\n", __LINE__);
-    dram_mr0 = 0x0;
-  printf("line: %d\n", __LINE__);
-    dram_mr1 = 0xc3;
-    dram_mr2 = 0x6;
-    dram_mr3 = 0x2;
-    dram_mr4 = 0x0;
-    dram_mr5 = 0x0;
-    dram_mr6 = 0x0;
-    dram_mr11 = 0x0;
-    dram_mr12  = 0x0;
-    dram_mr14 = 0x0;
-    dram_mr22 = 0x0;
-    dram_tpr2 = 0x0;
-    dram_tpr13 = 0x60;
+  u32 dram_mr0 = 0x0;
+  u32 dram_mr1 = 0xc3;
+  u32 dram_mr2 = 0x6;
+  u32 dram_mr3 = 0x2;
+  u32 dram_mr4 = 0x0;
+  u32 dram_mr5 = 0x0;
+  u32 dram_mr6 = 0x0;
+  u32 dram_mr11 = 0x0;
+  u32 dram_mr12  = 0x0;
+  u32 dram_mr14 = 0x0;
+  u32 dram_mr22 = 0x0;
+  u32 dram_tpr2 = 0x0;
+  u32 dram_tpr13 = 0x60;
 
-  printf("line: %d\n", __LINE__);
   while ( v1 != -1 )
   {
     dram_tpr13 = dram_tpr13;
@@ -371,11 +353,8 @@ LABEL_72:
       case 7u:
         dram_mr1 = 131;
         dram_mr2 = 28;
-        printf("line: %d\n", __LINE__);
         dram_mr0 = dram_mr0;
-        printf("line: %d\n", __LINE__);
         dram_mr0 = 0;
-        printf("line: %d\n", __LINE__);
         v6 = 3;
         v62 = (unsigned __int8)(v4 + 9);
         v39 = 5;
@@ -439,7 +418,6 @@ LABEL_73:
       default:
         break;
     }
-    printf("line: %d\n", __LINE__);
     v7[0x1208040] = v59 | (v58 << 16) | (v54 << 24) | (v61 << 8);
     v7[0x1208041] = v57 | (v48 << 16) | (v3 << 8);
     v7[0x1208042] = (v51 << 16) | (v40 << 24) | v62 | (v49 << 8);
@@ -456,38 +434,26 @@ LABEL_73:
     v7[0x120804E] = v67;
     if ( dram_type == 7 )
     {
-      printf("line: %d\n", __LINE__);
       v26 = _REG(0x48200D0) & 0x3C00FFFF | 0x4F0000;
-      printf("line: %d\n", __LINE__);
 LABEL_76:
       v27 = v26 & 0x3FFFF000 | 0x112;
       goto LABEL_98;
     }
     if ( dram_type != 8 )
     {
-      printf("line: %d\n", __LINE__);
       v26 = _REG(0x48200D0) & 0x3FFFFFFF;
-      printf("line: %d\n", __LINE__);
       goto LABEL_76;
     }
-    printf("line: %d\n", __LINE__);
     v27 = _REG(0x48200D0) & 0x3FFFF000 | 0x3F0;
-    printf("line: %d\n", __LINE__);
 LABEL_98:
-    printf("line: %d\n", __LINE__);
     _REG(0x48200D0) = v27;
-    printf("line: %d\n", __LINE__);
     if ( (dram_tpr13 & 8) != 0 )
       v34 = 0x420000;
     else
       v34 = 0x1F20000;
-    printf("line: %d\n", __LINE__);
     _REG(0x48200D4) = v34;
-    printf("line: %d\n", __LINE__);
     _REG(0x48200D8) = _REG(0x48200D8) & 0xFFFF00F0 | 0xD05;
-    printf("line: %d\n", __LINE__);
     _REG(0x48201B0) = 0;
-    printf("line: %d\n", __LINE__);
     dram_mr1 = dram_mr1;
     if ( dram_type - 6 > 2 )
     {
