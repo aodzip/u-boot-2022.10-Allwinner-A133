@@ -1,6 +1,8 @@
 /*
- * H616 dram controller register and constant defines
+ * A133 dram controller register and constant defines
+ * libdram version
  *
+ * Based on H616 one, which is:
  * (C) Copyright 2020  Jernej Skrabec <jernej.skrabec@siol.net>
  *
  * Based on H6 one, which is:
@@ -13,6 +15,7 @@
 #define _SUNXI_DRAM_SUN50I_A133_H
 
 #include <stdbool.h>
+#include <inttypes.h>
 #ifndef __ASSEMBLY__
 #include <linux/bitops.h>
 #endif
@@ -144,47 +147,38 @@ check_member(sunxi_mctl_ctl_reg, unk_0x4240, 0x4240);
 
 struct dram_para
 {
-	u32 clk;
+	uint32_t clk;
 	enum sunxi_dram_type type;
-	u32 dx_odt;
-	u32 dx_dri;
-	u32 ca_dri;
-	u32 para0;
-	u32 para1;
-	u32 para2;
-	u32 mr0;
-	u32 mr1;
-	u32 mr2;
-	u32 mr3;
-	u32 mr4;
-	u32 mr5;
-	u32 mr6;
-	u32 mr11;
-	u32 mr12;
-	u32 mr13;
-	u32 mr14;
-	u32 mr16;
-	u32 mr17;
-	u32 mr22;
-	u32 tpr0;
-	u32 tpr1;
-	u32 tpr2;
-	u32 tpr3;
-	u32 tpr6;
-	u32 tpr10;
-	u32 tpr11;
-	u32 tpr12;
-	u32 tpr13;
-	u32 tpr14;
+	uint32_t dx_odt;
+	uint32_t dx_dri;
+	uint32_t ca_dri;
+	uint32_t para0;
+	uint32_t para1;
+	uint32_t para2;
+	uint32_t mr0;
+	uint32_t mr1;
+	uint32_t mr2;
+	uint32_t mr3;
+	uint32_t mr4;
+	uint32_t mr5;
+	uint32_t mr6;
+	uint32_t mr11;
+	uint32_t mr12;
+	uint32_t mr13;
+	uint32_t mr14;
+	uint32_t mr16;
+	uint32_t mr17;
+	uint32_t mr22;
+	uint32_t tpr0;
+	uint32_t tpr1;
+	uint32_t tpr2;
+	uint32_t tpr3;
+	uint32_t tpr6;
+	uint32_t tpr10;
+	uint32_t tpr11;
+	uint32_t tpr12;
+	uint32_t tpr13;
+	uint32_t tpr14;
 };
-
-static inline int ns_to_t(int nanoseconds)
-{
-	const unsigned int ctrl_freq = CONFIG_DRAM_CLK / 2;
-
-	return DIV_ROUND_UP(ctrl_freq * nanoseconds, 1000);
-}
-
-void mctl_set_timing_params(struct dram_para *para);
 
 #endif /* _SUNXI_DRAM_SUN50I_A133_H */

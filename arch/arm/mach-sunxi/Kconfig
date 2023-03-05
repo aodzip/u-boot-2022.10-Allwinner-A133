@@ -91,46 +91,6 @@ config DRAM_SUN50I_A133
 	  Select this dram controller driver for some sun50i platforms,
 	  like A133.
 
-if DRAM_SUN50I_A133
-config DRAM_SUN50I_A133_WRITE_LEVELING
-	bool "A133 DRAM write leveling"
-	---help---
-	  Select this when DRAM on your A133 board needs write leveling.
-
-config DRAM_SUN50I_A133_READ_CALIBRATION
-	bool "A133 DRAM read calibration"
-	---help---
-	  Select this when DRAM on your A133 board needs read calibration.
-
-config DRAM_SUN50I_A133_READ_TRAINING
-	bool "A133 DRAM read training"
-	---help---
-	  Select this when DRAM on your A133 board needs read training.
-
-config DRAM_SUN50I_A133_WRITE_TRAINING
-	bool "A133 DRAM write training"
-	---help---
-	  Select this when DRAM on your A133 board needs write training.
-
-config DRAM_SUN50I_A133_DX_BIT_DELAY_COMPENSATION
-	bool "A133 DRAM DX bit delay compensation"
-	---help---
-	  Select this when DRAM on your A133 board needs dx bit delay
-	  compensation.
-
-config DRAM_SUN50I_A133_CA_BIT_DELAY_COMPENSATION
-	bool "A133 DRAM CA bit delay compensation"
-	---help---
-	  Select this when DRAM on your A133 board needs ca bit delay
-	  compensation.
-
-config DRAM_SUN50I_A133_DELAY_ON_PHY_CONFIG
-	bool "A133 DRAM additional delay on phy config"
-	---help---
-	  Select this when DRAM on your A133 board needs additional
-	  delay on phy config, depends on tpr13 BIT(4).
-endif
-
 config SUN6I_PRCM
 	bool
 	help
@@ -149,7 +109,7 @@ config SUNXI_SRAM_ADDRESS
 	hex
 	default 0x10000 if MACH_SUN9I || MACH_SUN50I || MACH_SUN50I_H5
 	default 0x20000 if SUN50I_GEN_H6 && !MACH_SUN50I_A133
-	default 0x24000 if MACH_SUN50I_A133
+	default 0x28000 if MACH_SUN50I_A133
 	default 0x0
 	---help---
 	Older Allwinner SoCs have their mask boot ROM mapped just below 4GB,
