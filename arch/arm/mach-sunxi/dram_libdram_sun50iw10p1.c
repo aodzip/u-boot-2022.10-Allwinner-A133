@@ -20,12 +20,82 @@
 #include <linux/delay.h>
 #include <linux/kconfig.h>
 
-#include "dram_libdram_sun50iw10p1_generated.c"
-
 static struct sunxi_ccm_reg *const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 static struct sunxi_prcm_reg *const prcm = (struct sunxi_prcm_reg *)SUNXI_PRCM_BASE;
 static struct sunxi_mctl_com_reg *const mctl_com = (struct sunxi_mctl_com_reg *)SUNXI_DRAM_COM_BASE;
 static struct sunxi_mctl_ctl_reg *const mctl_ctl = (struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
+
+struct dram_para para __section(".data") = {
+	.clk = CONFIG_DRAM_CLK,
+	.type = SUNXI_DRAM_TYPE_LPDDR3,
+	.dx_odt = 0x06060606,
+	.dx_dri = 0x0c0c0c0c,
+	.ca_dri = 0x1919,
+	.para0 = 0x16171411,
+	.para1 = 0x30eb,
+	.para2 = 0x0000,
+	.mr0 = 0x0,
+	.mr1 = 0xc3,
+	.mr2 = 0x6,
+	.mr3 = 0x2,
+	.mr4 = 0x0,
+	.mr5 = 0x0,
+	.mr6 = 0x0,
+	.mr11 = 0x0,
+	.mr12 = 0x0,
+	.mr13 = 0x0,
+	.mr14 = 0x0,
+	.mr16 = 0x0,
+	.mr17 = 0x0,
+	.mr22 = 0x0,
+	.tpr0 = 0x0,
+	.tpr1 = 0x0,
+	.tpr2 = 0x0,
+	.tpr3 = 0x0,
+	.tpr6 = 0x2fb48080,
+	.tpr10 = 0x002f876b,
+	.tpr11 = 0x10120c05,
+	.tpr12 = 0x12121111,
+	.tpr13 = 0x60,
+	.tpr14 = 0x211e1e22,
+};
+
+static struct dram_timing channel_timing __section(".data") = {
+	.trtp = 3,
+	.unk_4 = 3,
+	.trp = 6,
+	.tckesr = 3,
+	.trcd = 6,
+	.trrd = 3,
+	.tmod = 6,
+	.unk_42 = 4,
+	.txsr = 4,
+	.txs = 4,
+	.unk_66 = 8,
+	.unk_69 = 8,
+	.unk_50 = 1,
+	.unk_63 = 2,
+	.tcksre = 4,
+	.tcksrx = 4,
+	.trd2wr = 4,
+	.trasmax = 27,
+	.twr2rd = 8,
+	.twtp = 12,
+	.trfc = 128,
+	.trefi = 98,
+	.txp = 10,
+	.tfaw = 16,
+	.tras = 14,
+	.trc = 20,
+	.tcke = 2,
+	.tmrw = 0,
+	.tccd = 2,
+	.tmrd = 2,
+	.tcwl = 3,
+	.tcl = 3,
+	.unk_43 = 1,
+	.unk_44 = 1,
+};
 
 static const unsigned char phy_init_ddr3_a[] = {
 	0x0C, 0x08, 0x19, 0x18, 0x10, 0x06, 0x0A, 0x03,
@@ -69,13 +139,6 @@ static const unsigned char phy_init_lpddr4_b[] = {
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x04,
 	0x18, 0x05, 0x1A};
 
-static void libdram_panic(const char *str)
-{
-	printf("%s", str);
-	while (1)
-		;
-}
-
 static void libdram_mctl_await_completion(uint32_t *reg, uint32_t mask, uint32_t val)
 {
 	unsigned long tmo = timer_get_us() + 1000000;
@@ -83,7 +146,7 @@ static void libdram_mctl_await_completion(uint32_t *reg, uint32_t mask, uint32_t
 	while ((readl(reg) & mask) != val)
 	{
 		if (timer_get_us() > tmo)
-			libdram_panic("Timeout initialising DRAM\n");
+			panic("Timeout initialising DRAM\n");
 	}
 }
 
@@ -113,11 +176,11 @@ static int libdram_dramc_simple_wr_test(uint32_t dram_size, uint32_t test_range)
 		}
 		continue;
 	fail:
-		printf("DRAM simple test FAIL----- at address %p\n", ptr);
+		debug("DRAM simple test FAIL----- at address %p\n", ptr);
 		return 1;
 	}
 
-	printf("DRAM simple test OK.\n");
+	debug("DRAM simple test OK.\n");
 	return 0;
 }
 
@@ -210,7 +273,7 @@ static void libdram_mctl_com_set_bus_config(struct dram_para *para)
 	if ((para->tpr13 & 0x10000000) != 0)
 	{
 		clrsetbits_le32(&mctl_ctl->sched[0], 0xf, 0x1);
-		printf("MX_SCHED(0x04820250) = %p \n", &mctl_ctl->sched[0]);
+		debug("MX_SCHED(0x04820250) = %p \n", &mctl_ctl->sched[0]);
 	}
 }
 
@@ -428,6 +491,150 @@ static void libdram_mctl_com_set_controller_address_map(struct dram_para *para)
 	}
 }
 
+static uint32_t libdram_auto_cal_timing(int a1, int a2)
+{
+	unsigned int result;
+
+	result = a2 * a1 / 1000;
+	if (a2 * a1 % 1000)
+		++result;
+	return result;
+}
+
+static void libdram_mctl_com_set_channel_timing(struct dram_para *para)
+{
+	uint32_t ctrl_freq;
+
+	ctrl_freq = (((*((uint32_t *)0x3001011)) + 1) * 24) >> 2;
+
+	switch (para->type)
+	{
+	case SUNXI_DRAM_TYPE_DDR3:
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR3:
+		channel_timing.tfaw = libdram_auto_cal_timing(50, ctrl_freq);
+		if (channel_timing.tfaw < 4)
+			channel_timing.tfaw = 4;
+		channel_timing.trrd = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.trrd < 1)
+			channel_timing.trrd = 1;
+		channel_timing.trcd = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.trcd < 1)
+			channel_timing.trcd = 1;
+		channel_timing.trc = libdram_auto_cal_timing(70, ctrl_freq);
+		channel_timing.trtp = libdram_auto_cal_timing(8, ctrl_freq);
+		if (channel_timing.trtp < 2)
+			channel_timing.trtp = 2;
+		channel_timing.trp = libdram_auto_cal_timing(27, ctrl_freq);
+		channel_timing.tras = libdram_auto_cal_timing(42, ctrl_freq);
+		channel_timing.unk_4 = channel_timing.trtp;
+		channel_timing.trefi = libdram_auto_cal_timing(3900, ctrl_freq) >> 5;
+		channel_timing.trfc = libdram_auto_cal_timing(210, ctrl_freq);
+		channel_timing.txp = channel_timing.trtp;
+		channel_timing.txsr = libdram_auto_cal_timing(220, ctrl_freq);
+		channel_timing.tccd = 2;
+		para->mr0 = 0;
+		para->mr1 = 0x83;
+		para->mr2 = 0x1c;
+		channel_timing.tcke = 3;
+		channel_timing.twr2rd = channel_timing.unk_4 + 9;
+		channel_timing.tcksre = 5;
+		channel_timing.tcksrx = 5;
+		channel_timing.tckesr = 5;
+		channel_timing.trd2wr = 0xd;
+		channel_timing.trasmax = 0x18;
+		channel_timing.twtp = 0x10;
+		channel_timing.tmod = 0xc;
+		channel_timing.tmrd = 5;
+		channel_timing.tmrw = 5;
+		channel_timing.tcwl = 4;
+		channel_timing.tcl = 7;
+		channel_timing.unk_44 = 6;
+		channel_timing.unk_43 = 0xc;
+		break;
+	case SUNXI_DRAM_TYPE_DDR4:
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR4:
+		break;
+	}
+
+	writel((channel_timing.twtp << 24) | (channel_timing.tfaw << 16) | (channel_timing.trasmax << 8) | channel_timing.tras, &mctl_ctl->dramtmg[0]);
+	writel((channel_timing.txp << 16) | (channel_timing.trtp << 8) | channel_timing.trc, &mctl_ctl->dramtmg[1]);
+	writel((channel_timing.tcwl << 24) | (channel_timing.tcl << 16) | (channel_timing.trd2wr << 8) | channel_timing.twr2rd, &mctl_ctl->dramtmg[2]);
+	writel((channel_timing.tmrw << 20) | (channel_timing.tmrd << 12) | channel_timing.tmod, &mctl_ctl->dramtmg[3]);
+	writel((channel_timing.trcd << 24) | (channel_timing.tccd << 16) | (channel_timing.trrd << 8) | channel_timing.trp, &mctl_ctl->dramtmg[4]);
+	writel((channel_timing.tcksrx << 24) | (channel_timing.tcksre << 16) | (channel_timing.tckesr << 8) | channel_timing.tcke, &mctl_ctl->dramtmg[5]);
+	writel((channel_timing.txp + 2) | 0x02020000, &mctl_ctl->dramtmg[6]);
+	writel((channel_timing.unk_42 << 24) | (channel_timing.unk_42 << 16) | 0x1000 | channel_timing.txs, &mctl_ctl->dramtmg[8]);
+	writel(channel_timing.unk_69 | (channel_timing.unk_63 << 8) | 0x20000, &mctl_ctl->dramtmg[9]);
+	writel(0xE0C05, &mctl_ctl->dramtmg[10]);
+	writel(0x440C021C, &mctl_ctl->dramtmg[11]);
+	writel(channel_timing.unk_66, &mctl_ctl->dramtmg[12]);
+	writel(0xA100002, &mctl_ctl->dramtmg[13]);
+	writel(channel_timing.txsr, &mctl_ctl->dramtmg[14]);
+
+	switch (para->type)
+	{
+	case SUNXI_DRAM_TYPE_DDR3:
+		clrbits_le32(&mctl_ctl->init[0], 0xC0000000);
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR3:
+		clrsetbits_le32(&mctl_ctl->init[0], 0xC3FF0000 | 0xC0000FFF, 0x4F0000 | 0x112);
+		break;
+	case SUNXI_DRAM_TYPE_DDR4:
+		clrbits_le32(&mctl_ctl->init[0], 0xC0000000);
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR4:
+		clrsetbits_le32(&mctl_ctl->init[0], 0xC0000FFF, 0x3F0);
+		break;
+	}
+
+	if (para->tpr13 & 8)
+	{
+		writel(0x420000, &mctl_ctl->init[1]);
+	}
+	else
+	{
+		writel(0x1F20000, &mctl_ctl->init[1]);
+	}
+
+	clrsetbits_le32(&mctl_ctl->init[2], 0xFF0F, 0xFF0F);
+	writel(0, &mctl_ctl->dfimisc);
+
+	switch (para->type)
+	{
+	case SUNXI_DRAM_TYPE_DDR4:
+		writel(para->mr5 | (para->mr4 << 16), &mctl_ctl->init[6]);
+		writel(para->mr6, &mctl_ctl->init[7]);
+	case SUNXI_DRAM_TYPE_DDR3:
+		writel(para->mr1 | (para->mr0 << 16), &mctl_ctl->init[3]);
+		writel(para->mr3 | (para->mr2 << 16), &mctl_ctl->init[4]);
+		break;
+	case SUNXI_DRAM_TYPE_LPDDR4:
+		writel(para->mr12 | (para->mr11 << 16), &mctl_ctl->init[6]);
+		writel(para->mr14 | (para->mr22 << 16), &mctl_ctl->init[7]);
+	case SUNXI_DRAM_TYPE_LPDDR3:
+		writel(para->mr2 | (para->mr1 << 16), &mctl_ctl->init[3]);
+		writel(para->mr3 << 16, &mctl_ctl->init[4]);
+		break;
+	}
+
+	clrsetbits_le32(&mctl_ctl->rankctl, 0xff0, 0x660);
+
+	if (para->tpr13 & 0x20)
+	{
+		writel((channel_timing.unk_44) | 0x2000000 | (channel_timing.unk_43 << 16) | 0x808000, &mctl_ctl->dfitmg0);
+	}
+	else
+	{
+		writel((channel_timing.unk_44 - 1) | 0x2000000 | ((channel_timing.unk_43 - 1) << 16) | 0x808000, &mctl_ctl->dfitmg0);
+	}
+
+	writel(0x100202, &mctl_ctl->dfitmg1);
+
+	writel(channel_timing.trfc | (channel_timing.trefi << 16), &mctl_ctl->rfshtmg);
+}
+
 static void libdram_mctl_com_set_controller_update(void)
 {
 	setbits_le32(&mctl_ctl->dfiupd[0], BIT(31) | BIT(30));
@@ -471,15 +678,19 @@ static void libdram_mctl_com_init(struct dram_para *para)
 
 	libdram_mctl_com_set_controller_odt(para);
 	// mctl_com_set_controller_address_map(para);
-	// printf("external 2: %x, 3: %x, 4:  %x\n", mctl_ctl->addrmap[2], mctl_ctl->addrmap[3], mctl_ctl->addrmap[4]);
-	// printf("external 8: %x, 1: %x, 5:  %x\n", mctl_ctl->addrmap[8], mctl_ctl->addrmap[1], mctl_ctl->addrmap[5]);
-	// printf("external 6: %x, 7: %x, 0:  %x\n", mctl_ctl->addrmap[6], mctl_ctl->addrmap[7], mctl_ctl->addrmap[0]);
+	// debug("external 2: %x, 3: %x, 4:  %x\n", mctl_ctl->addrmap[2], mctl_ctl->addrmap[3], mctl_ctl->addrmap[4]);
+	// debug("external 8: %x, 1: %x, 5:  %x\n", mctl_ctl->addrmap[8], mctl_ctl->addrmap[1], mctl_ctl->addrmap[5]);
+	// debug("external 6: %x, 7: %x, 0:  %x\n", mctl_ctl->addrmap[6], mctl_ctl->addrmap[7], mctl_ctl->addrmap[0]);
 	libdram_mctl_com_set_controller_address_map(para);
-	printf("internal 2: %x, 3: %x, 4:  %x\n", mctl_ctl->addrmap[2], mctl_ctl->addrmap[3], mctl_ctl->addrmap[4]);
-	printf("internal 8: %x, 1: %x, 5:  %x\n", mctl_ctl->addrmap[8], mctl_ctl->addrmap[1], mctl_ctl->addrmap[5]);
-	printf("internal 6: %x, 7: %x, 0:  %x\n", mctl_ctl->addrmap[6], mctl_ctl->addrmap[7], mctl_ctl->addrmap[0]);
+	// debug("internal 2: %x, 3: %x, 4:  %x\n", mctl_ctl->addrmap[2], mctl_ctl->addrmap[3], mctl_ctl->addrmap[4]);
+	// debug("internal 8: %x, 1: %x, 5:  %x\n", mctl_ctl->addrmap[8], mctl_ctl->addrmap[1], mctl_ctl->addrmap[5]);
+	// debug("internal 6: %x, 7: %x, 0:  %x\n", mctl_ctl->addrmap[6], mctl_ctl->addrmap[7], mctl_ctl->addrmap[0]);
 
 	libdram_mctl_com_set_channel_timing(para);
+	// for (int i = 0; i < 17; i++)
+	// {
+	// 	debug("mctl_ctl->dramtmg[%d]: %x\n", i, mctl_ctl->dramtmg[i]);
+	// }
 
 	writel(0, &mctl_ctl->pwrctl);
 
@@ -556,7 +767,7 @@ static void libdram_mctl_phy_set_address_remapping(struct dram_para *para)
 	ptr = (uint32_t *)(SUNXI_DRAM_PHY0_BASE + 0xc0);
 	for (i = 0; i < 27; i++)
 	{
-		// printf("val: %u, ptr: %p\n", phy_init[i], ptr);
+		// debug("val: %u, ptr: %p\n", phy_init[i], ptr);
 		writel(phy_init[i], ptr++);
 	}
 }
@@ -717,7 +928,7 @@ static void libdram_mctl_phy_ca_bit_delay_compensation(struct dram_para *para)
 	ptr = (uint32_t *)(SUNXI_DRAM_PHY0_BASE + 0x780);
 	for (i = 0; i < 32; i++)
 	{
-		// printf("val: %u, ptr: %p\n", (tpr0 >> 8) & 0x3F, ptr);
+		// debug("val: %u, ptr: %p\n", (tpr0 >> 8) & 0x3F, ptr);
 		writel((tpr0 >> 8) & 0x3f, ptr++);
 	}
 
@@ -1288,7 +1499,7 @@ static bool libdram_ddrphy_phyinit_C_initPhyConfig(struct dram_para *para)
 
 		if (i == max_retry)
 		{
-			printf("phy_write_leveling failed!\n");
+			debug("phy_write_leveling failed!\n");
 			return false;
 		}
 	}
@@ -1301,7 +1512,7 @@ static bool libdram_ddrphy_phyinit_C_initPhyConfig(struct dram_para *para)
 
 		if (i == max_retry)
 		{
-			printf("phy_read_calibration failed!\n");
+			debug("phy_read_calibration failed!\n");
 			return false;
 		}
 	}
@@ -1314,7 +1525,7 @@ static bool libdram_ddrphy_phyinit_C_initPhyConfig(struct dram_para *para)
 
 		if (i == max_retry)
 		{
-			printf("phy_read_training failed!\n");
+			debug("phy_read_training failed!\n");
 			return false;
 		}
 	}
@@ -1327,7 +1538,7 @@ static bool libdram_ddrphy_phyinit_C_initPhyConfig(struct dram_para *para)
 
 		if (i == max_retry)
 		{
-			printf("phy_write_training failed!\n");
+			debug("phy_write_training failed!\n");
 			return false;
 		}
 	}
@@ -1405,29 +1616,29 @@ static uint32_t libdram_init_DRAM(struct dram_para *para)
 		tmp_tpr11 = para->tpr11;
 		tmp_tpr12 = para->tpr12;
 	}
-	printf("DRAM BOOT DRIVE INFO: %s\n", "V0.696");
+	debug("DRAM BOOT DRIVE INFO: %s\n", "V0.696");
 
 	(*((uint32_t *)0x3000160)) |= 0x100;
 	(*((uint32_t *)0x3000168)) &= 0xffffffc0;
 
 	if ((para->tpr13 & 1) == 0 && !libdram_auto_scan_dram_config(para))
 	{
-		printf("auto_scan_dram_config: failed\n");
+		debug("auto_scan_dram_config: failed\n");
 		return false;
 	}
 
 	if ((para->tpr13 & 0x800) != 0 && !libdram_dram_software_training(para))
 	{
-		printf("dram_software_training: failed\n");
+		debug("dram_software_training: failed\n");
 		return false;
 	}
 
-	printf("DRAM CLK = %d MHZ\n", para->clk);
-	printf("DRAM Type = %d (3:DDR3,4:DDR4,7:LPDDR3,8:LPDDR4)\n", para->type);
+	debug("DRAM CLK = %d MHZ\n", para->clk);
+	debug("DRAM Type = %d (3:DDR3,4:DDR4,7:LPDDR3,8:LPDDR4)\n", para->type);
 
 	if (!libdram_mctl_core_init(para))
 	{
-		printf("DRAM initial error : 0 !\n");
+		debug("DRAM initial error : 0 !\n");
 		return false;
 	}
 
@@ -1439,7 +1650,7 @@ static uint32_t libdram_init_DRAM(struct dram_para *para)
 	case 3:
 		if (actual_dram_size != dram_size)
 		{
-			printf("DRAM SIZE error! auto_scan_dram_size = %d, actual_dram_size = %d\n", dram_size, actual_dram_size);
+			debug("DRAM SIZE error! auto_scan_dram_size = %d, actual_dram_size = %d\n", dram_size, actual_dram_size);
 			return false;
 		}
 		break;
@@ -1451,7 +1662,7 @@ static uint32_t libdram_init_DRAM(struct dram_para *para)
 		para->para2 |= dram_size << 16;
 		break;
 	}
-	printf("DRAM SIZE = %d MBytes, para1 = %x, para2 = %x, tpr13 = %x\n", dram_size, para->para1, para->para2, para->tpr13);
+	debug("DRAM SIZE = %d MBytes, para1 = %x, para2 = %x, tpr13 = %x\n", dram_size, para->para1, para->para2, para->tpr13);
 
 	if ((para->tpr13 & 0x1000000) != 0)
 		mctl_ctl->pwrctl |= 9;
@@ -1468,7 +1679,7 @@ static uint32_t libdram_init_DRAM(struct dram_para *para)
 			return false;
 		if (!libdram_mctl_core_init(para))
 		{
-			printf("DRAM initial error : 1 !\n");
+			debug("DRAM initial error : 1 !\n");
 			return false;
 		}
 		if (libdram_dramc_simple_wr_test(dram_size, 4096))
@@ -1480,40 +1691,5 @@ static uint32_t libdram_init_DRAM(struct dram_para *para)
 
 unsigned long sunxi_dram_init(void)
 {
-	struct dram_para para = {
-		.clk = CONFIG_DRAM_CLK,
-		.type = SUNXI_DRAM_TYPE_LPDDR3,
-		.dx_odt = 0x06060606,
-		.dx_dri = 0x0c0c0c0c,
-		.ca_dri = 0x1919,
-		.para0 = 0x16171411,
-		.para1 = 0x30eb,
-		.para2 = 0x0000,
-		.mr0 = 0x0,
-		.mr1 = 0xc3,
-		.mr2 = 0x6,
-		.mr3 = 0x2,
-		.mr4 = 0x0,
-		.mr5 = 0x0,
-		.mr6 = 0x0,
-		.mr11 = 0x0,
-		.mr12 = 0x0,
-		.mr13 = 0x0,
-		.mr14 = 0x0,
-		.mr16 = 0x0,
-		.mr17 = 0x0,
-		.mr22 = 0x0,
-		.tpr0 = 0x0,
-		.tpr1 = 0x0,
-		.tpr2 = 0x0,
-		.tpr3 = 0x0,
-		.tpr6 = 0x2fb48080,
-		.tpr10 = 0x002f876b,
-		.tpr11 = 0x10120c05,
-		.tpr12 = 0x12121111,
-		.tpr13 = 0x60,
-		.tpr14 = 0x211e1e22,
-	};
-
 	return libdram_init_DRAM(&para) * 1024 * 1024;
 };

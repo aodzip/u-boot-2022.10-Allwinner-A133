@@ -181,4 +181,48 @@ struct dram_para
 	uint32_t tpr14;
 };
 
+struct dram_timing
+{
+	uint8_t tccd;
+	uint8_t tfaw;
+	uint8_t trrd;
+	uint8_t trcd;
+	uint8_t trc;
+	uint8_t txp;
+	uint8_t trtp;
+	uint8_t trp;
+	uint8_t tras;
+	uint16_t trefi;
+	uint16_t trfc;
+	uint16_t txsr;
+
+	uint8_t tmrw;
+	uint8_t tmrd;
+	uint8_t tmod;
+	uint8_t tcke;
+	uint8_t tcksrx;
+	uint8_t tcksre;
+	uint8_t tckesr;
+	uint8_t trasmax;
+	uint8_t txs;
+	uint8_t txsdll;
+	uint8_t txsabort;
+	uint8_t txsfas;
+	uint8_t tcl;
+	uint8_t tcwl;
+
+	uint8_t twtp;
+	uint8_t twr2rd;
+	uint8_t trd2wr;
+
+	uint8_t unk_4;
+	uint8_t unk_42;
+	uint8_t unk_43;
+	uint8_t unk_44;
+	uint8_t unk_50;
+	uint8_t unk_63;
+	uint8_t unk_66;
+	uint8_t unk_69;
+};
+
 #endif /* _SUNXI_DRAM_SUN50I_A133_H */
