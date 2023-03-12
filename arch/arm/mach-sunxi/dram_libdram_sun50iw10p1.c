@@ -555,6 +555,65 @@ static void libdram_mctl_com_set_channel_timing(struct dram_para *para)
 	case SUNXI_DRAM_TYPE_DDR4:
 		break;
 	case SUNXI_DRAM_TYPE_LPDDR4:
+		channel_timing.tfaw = libdram_auto_cal_timing(40, ctrl_freq);
+		channel_timing.unk_4 = libdram_auto_cal_timing(10, ctrl_freq);
+		channel_timing.trrd = channel_timing.unk_4;
+		if (channel_timing.trrd < 2)
+			channel_timing.trrd = 2;
+		channel_timing.trcd = libdram_auto_cal_timing(18, ctrl_freq);
+		if (channel_timing.trcd < 2)
+			channel_timing.trcd = 2;
+		channel_timing.trc = libdram_auto_cal_timing(65, ctrl_freq);
+		channel_timing.trtp = libdram_auto_cal_timing(8, ctrl_freq);
+		channel_timing.txp = channel_timing.trtp;
+		if (channel_timing.txp < 2)
+			channel_timing.txp = 2;
+		if (para->tpr13 & 0x10000000)
+		{
+			channel_timing.unk_4 = libdram_auto_cal_timing(12, ctrl_freq);
+			channel_timing.tcl = 11;
+			channel_timing.unk_44 = 5;
+			channel_timing.unk_43 = 19;
+		}
+		else
+		{
+			channel_timing.tcl = 10;
+			channel_timing.unk_44 = 5;
+			channel_timing.unk_43 = 17;
+		}
+		if (channel_timing.unk_4 < 4)
+			channel_timing.unk_4 = 4;
+		if (channel_timing.trtp < 4)
+			channel_timing.trtp = 4;
+		channel_timing.trp = libdram_auto_cal_timing(21, ctrl_freq);
+		channel_timing.tras = libdram_auto_cal_timing(42, ctrl_freq);
+		channel_timing.trefi = libdram_auto_cal_timing(3904, ctrl_freq) >> 5;
+		channel_timing.trfc = libdram_auto_cal_timing(280, ctrl_freq);
+		channel_timing.txsr = libdram_auto_cal_timing(290, ctrl_freq);
+		channel_timing.tccd = 4;
+		channel_timing.tmrw = libdram_auto_cal_timing(14, ctrl_freq);
+		if (channel_timing.tmrw < 5)
+			channel_timing.tmrw = 5;
+		channel_timing.tcke = libdram_auto_cal_timing(15, ctrl_freq);
+		if (channel_timing.tcke < 2)
+			channel_timing.tcke = 2;
+		channel_timing.tcksrx = libdram_auto_cal_timing(2, ctrl_freq);
+		if (channel_timing.tcksrx < 2)
+			channel_timing.tcksrx = 2;
+		channel_timing.tcksre = libdram_auto_cal_timing(5, ctrl_freq);
+		if (channel_timing.tcksre < 2)
+			channel_timing.tcksre = 2;
+		channel_timing.trasmax = (uint32_t)(9 * channel_timing.trefi) >> 5;
+		para->mr1 = 52;
+		para->mr2 = 27;
+		channel_timing.trd2wr = (libdram_auto_cal_timing(4, ctrl_freq) + 17) - (libdram_auto_cal_timing(1, ctrl_freq));
+		channel_timing.tckesr = channel_timing.tcke;
+		channel_timing.trtp = 4;
+		channel_timing.twr2rd = channel_timing.unk_4 + 14;
+		channel_timing.tmrd = channel_timing.tmrw;
+		channel_timing.twtp = 24;
+		channel_timing.tmod = 12;
+		channel_timing.tcwl = 5;
 		break;
 	}
 
@@ -1590,10 +1649,126 @@ static bool libdram_mctl_core_init(struct dram_para *para)
 	return libdram_mctl_channel_init(para);
 }
 
+static bool libdram_auto_scan_dram_rank_width(struct dram_para *para)
+{
+	printf("!!!WARNING!!! libdram_auto_scan_dram_rank_width: unimplemented\n");
+	// return auto_scan_dram_rank_width(para);
+	return true;
+}
+
+static bool libdram_auto_scan_dram_size(struct dram_para *para)
+{
+	printf("!!!WARNING!!! libdram_auto_scan_dram_size: unimplemented\n");
+	// return auto_scan_dram_size(para);
+	return true;
+}
+
 static bool libdram_auto_scan_dram_config(struct dram_para *para)
 {
-	printf("!!!WARNING!!! libdram_auto_scan_dram_config: unimplemented\n");
-	// return auto_scan_dram_config(para);
+	uint32_t clk;
+	uint32_t para0;
+	uint32_t tpr11, tpr12, tpr14;
+	uint32_t dram_size;
+
+	clk = para->clk;
+
+	if ((para->tpr13 & 0x1000) && (para->clk > 360))
+		para->clk = 360;
+
+	para0 = para->tpr13 & 0x2000000;
+
+	if (para->tpr13 & 0x2000000)
+	{
+		para0 = para->para0;
+		para->para0 = 0x14151A1C;
+		tpr12 = para->tpr12;
+		tpr11 = para->tpr11;
+		tpr14 = para->tpr14;
+		para->tpr11 = 0xE131619;
+		para->tpr12 = 0x18171817;
+		para->tpr14 = 0x2A28282B;
+	}
+	else
+	{
+		tpr14 = 0;
+		tpr12 = 0;
+		tpr11 = 0;
+	}
+
+	if (!(para->tpr13 & 0x4000))
+	{
+		if (!libdram_auto_scan_dram_rank_width(para) || !libdram_auto_scan_dram_size(para))
+		{
+			return false;
+		}
+	}
+
+	if (!(para->tpr13 & 0x8000))
+		para->tpr13 |= 0x6001;
+
+	if (para->tpr13 & 0x80000)
+	{
+		uint32_t *ptr;
+
+		if (!libdram_mctl_core_init(para))
+			return false;
+
+		dram_size = libdram_DRAMC_get_dram_size(para);
+		para->tpr13 &= ~0x80000u;
+
+		switch (dram_size)
+		{
+		case 4096:
+			ptr = (uint32_t *)(CONFIG_SYS_SDRAM_BASE + 0x60000000u);
+			writel(0xa0a0a0a0, ptr);
+			if (readl(ptr) != 0xa0a0a0a0)
+			{
+				para->tpr13 |= 0x10000;
+				printf("[AUTO DEBUG]3GB autoscan enable,dram_tpr13 = %x\n", para->tpr13);
+			}
+			break;
+		case 2048:
+			ptr = (uint32_t *)(CONFIG_SYS_SDRAM_BASE + 0x30000000u);
+			writel(0x70707070, ptr);
+			if (readl(ptr) == 0x70707070)
+			{
+				ptr = (uint32_t *)(CONFIG_SYS_SDRAM_BASE + 0x60000000u);
+				writel(0xa0a0a0a0, ptr);
+				udelay(1);
+				if (readl(ptr) != 0xa0a0a0a0)
+					para->tpr13 |= 0x50000;
+			}
+			else
+			{
+				para->tpr13 |= 0x20000;
+			}
+			printf("[AUTO DEBUG]1.5GB autoscan enable,dram_tpr13 = %x\n", para->tpr13);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (para->tpr13 & 0x2000000)
+	{
+		if (para->para2 & 0x1000)
+		{
+			para->para0 = para0;
+			para->tpr11 = tpr11;
+			para->tpr12 = tpr12;
+			para->tpr14 = tpr14;
+		}
+		else
+		{
+			para->para0 = para->mr17;
+			para->tpr11 = para->tpr1;
+			para->tpr12 = para->tpr2;
+			para->tpr14 = para->mr22;
+		}
+	}
+
+	para->clk = clk;
+
 	return true;
 }
 
