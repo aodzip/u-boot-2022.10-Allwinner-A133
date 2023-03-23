@@ -6,6 +6,7 @@
  * (C) Copyright 2020 Jernej Skrabec <jernej.skrabec@siol.net>
  *
  */
+
 #include <stdbool.h>
 #include <inttypes.h>
 #include <common.h>
@@ -510,6 +511,53 @@ static void libdram_mctl_com_set_channel_timing(struct dram_para *para)
 	switch (para->type)
 	{
 	case SUNXI_DRAM_TYPE_DDR3:
+		channel_timing.tfaw = libdram_auto_cal_timing(50, ctrl_freq);
+		channel_timing.trrd = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.trrd < 2u)
+			channel_timing.trrd = 2;
+		channel_timing.trcd = libdram_auto_cal_timing(15, ctrl_freq);
+		channel_timing.trc = libdram_auto_cal_timing(53, ctrl_freq);
+		channel_timing.trtp = libdram_auto_cal_timing(8, ctrl_freq);
+		if (channel_timing.trtp < 2)
+			channel_timing.trtp = 2;
+		channel_timing.tras = libdram_auto_cal_timing(38, ctrl_freq);
+		channel_timing.unk_4 = channel_timing.trtp;
+		channel_timing.trefi = libdram_auto_cal_timing(7800, ctrl_freq) >> 5;
+		channel_timing.trfc = libdram_auto_cal_timing(350, ctrl_freq);
+		channel_timing.trp = channel_timing.trcd;
+		channel_timing.txs = libdram_auto_cal_timing(360, ctrl_freq) >> 5;
+		channel_timing.txp = channel_timing.trtp;
+		channel_timing.tccd = 2;
+		channel_timing.tcke = libdram_auto_cal_timing(8, ctrl_freq);
+		channel_timing.tcksrx = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.tcksrx <= 2)
+		{
+			channel_timing.tcke = 6;
+		}
+		else
+		{
+			if (channel_timing.tcke < 2u)
+				channel_timing.tcke = 2;
+		}
+		channel_timing.tckesr = channel_timing.tcke + 1;
+		channel_timing.trasmax = ctrl_freq / 15;
+		para->mr0 = 0x1F14;
+		para->mr2 &= ~0x38;
+		para->mr2 |= 0x20;
+		para->mr3 = 0;
+		if ((int)(channel_timing.trtp + channel_timing.trp) <= 8)
+			channel_timing.trtp = 9 - channel_timing.trp;
+		channel_timing.twr2rd = channel_timing.unk_4 + 7;
+		channel_timing.tcksre = channel_timing.tcksrx;
+		channel_timing.trd2wr = 5;
+		channel_timing.twtp = 14;
+		channel_timing.tmod = 12;
+		channel_timing.tmrd = 4;
+		channel_timing.tmrw = 0;
+		channel_timing.tcwl = 5;
+		channel_timing.tcl = 7;
+		channel_timing.unk_44 = 6;
+		channel_timing.unk_43 = 10;
 		break;
 	case SUNXI_DRAM_TYPE_LPDDR3:
 		channel_timing.tfaw = libdram_auto_cal_timing(50, ctrl_freq);
@@ -553,6 +601,61 @@ static void libdram_mctl_com_set_channel_timing(struct dram_para *para)
 		channel_timing.unk_43 = 0xc;
 		break;
 	case SUNXI_DRAM_TYPE_DDR4:
+		channel_timing.tfaw = libdram_auto_cal_timing(35, ctrl_freq);
+		channel_timing.trrd = libdram_auto_cal_timing(8, ctrl_freq);
+		if (channel_timing.trrd < 2u)
+			channel_timing.trrd = 2;
+		channel_timing.txp = libdram_auto_cal_timing(6, ctrl_freq);
+		if (channel_timing.txp < 2u)
+			channel_timing.txp = 2;
+		channel_timing.unk_66 = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.unk_66 < 8u)
+			channel_timing.unk_66 = 8;
+		channel_timing.trcd = libdram_auto_cal_timing(15, ctrl_freq);
+		channel_timing.trc = libdram_auto_cal_timing(49, ctrl_freq);
+		channel_timing.unk_50 = libdram_auto_cal_timing(3, ctrl_freq);
+		if (!channel_timing.unk_50)
+			channel_timing.unk_50 = 1;
+		channel_timing.tras = libdram_auto_cal_timing(34, ctrl_freq);
+		channel_timing.trefi = libdram_auto_cal_timing(7800, ctrl_freq) >> 5;
+		channel_timing.trfc = libdram_auto_cal_timing(350, ctrl_freq);
+		channel_timing.unk_4 = channel_timing.trrd;
+		channel_timing.txs = libdram_auto_cal_timing(360, ctrl_freq) >> 5;
+		channel_timing.trp = channel_timing.trcd;
+		channel_timing.unk_63 = channel_timing.txp;
+		channel_timing.tccd = 3;
+		channel_timing.tmod = libdram_auto_cal_timing(15, ctrl_freq);
+		if (channel_timing.tmod < 12)
+			channel_timing.tmod = 12;
+		channel_timing.tcke = libdram_auto_cal_timing(5, ctrl_freq);
+		if (channel_timing.tcke < 2)
+			channel_timing.tcke = 2;
+		channel_timing.tckesr = channel_timing.tcke + 1;
+		channel_timing.tcksrx = libdram_auto_cal_timing(10, ctrl_freq);
+		if (channel_timing.tcksrx < 3u)
+			channel_timing.tcksrx = 3;
+		channel_timing.unk_42 = libdram_auto_cal_timing(170, ctrl_freq) >> 5;
+		channel_timing.trasmax = libdram_auto_cal_timing(70200, ctrl_freq) >> 10;
+		if (channel_timing.trp > 4)
+			channel_timing.trtp = 4;
+		else
+			channel_timing.trtp = 9 - channel_timing.trp;
+		if (channel_timing.trp <= 4)
+			channel_timing.trtp = channel_timing.trtp;
+		para->mr2 &= ~0x38;
+		para->mr2 |= 8;
+		para->mr0 = 1312;
+		channel_timing.twr2rd = channel_timing.unk_4 + 7;
+		channel_timing.unk_69 = channel_timing.unk_50 + 7;
+		channel_timing.tcksre = channel_timing.tcksrx;
+		channel_timing.trd2wr = 5;
+		channel_timing.twtp = 14;
+		channel_timing.tmrd = 4;
+		channel_timing.tmrw = 0;
+		channel_timing.tcwl = 5;
+		channel_timing.tcl = 7;
+		channel_timing.unk_44 = 6;
+		channel_timing.unk_43 = 10;
 		break;
 	case SUNXI_DRAM_TYPE_LPDDR4:
 		channel_timing.tfaw = libdram_auto_cal_timing(40, ctrl_freq);
