@@ -88,9 +88,42 @@
 };
 
 &mmc0 {
-	vmmc-supply = <&reg_dcdce>;
+	// vmmc-supply = <&reg_dcdce>;
 	cd-gpios = <&pio 5 6 GPIO_ACTIVE_LOW>;	/* PF6 */
 	bus-width = <4>;
+	cd-used-24M;
+	cap-sd-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	sd-uhs-sdr104;
+	no-sdio;
+	no-mmc;
+	// vmmc-supply = <&reg_dcdc1>;
+	// vqmmc33sw-supply = <&reg_dcdc1>;
+	// vdmmc33sw-supply = <&reg_dcdc1>;
+	// vqmmc18sw-supply = <&reg_eldo1>;
+	// vdmmc18sw-supply = <&reg_eldo1>;
+
+	status = "okay";
+};
+
+&mmc1 {
+	bus-width = <4>;
+	no-mmc;
+	no-sd;
+ 	cap-sd-highspeed;
+	max-frequency = <50000000>;
+	status = "okay";
+};
+
+&mmc2 {
+	non-removable;
+	bus-width = <8>;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	no-sdio;
+	no-sd;
 	status = "okay";
 };
 

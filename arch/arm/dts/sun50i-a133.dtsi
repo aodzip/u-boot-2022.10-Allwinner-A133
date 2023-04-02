@@ -126,7 +126,7 @@
 		};
 
 		pio: pinctrl@300b000 {
-			compatible = "allwinner,sun50i-h616-pinctrl";
+			compatible = "allwinner,sun50i-a133-pinctrl";
 			reg = <0x0300b000 0x400>;
 			interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>,
@@ -144,27 +144,34 @@
 			#interrupt-cells = <3>;
 
 			ext_rgmii_pins: rgmii-pins {
-				pins = "PI0", "PI1", "PI2", "PI3", "PI4",
-				       "PI5", "PI7", "PI8", "PI9", "PI10",
-				       "PI11", "PI12", "PI13", "PI14", "PI15",
-				       "PI16";
+				pins = "PH0","PH1","PH2","PH3","PH4",
+					   "PH5","PH6","PH7","PH9","PH10",
+					   "PH13","PH14","PH15","PH16","PH17",
+					   "PH18";
 				function = "emac0";
 				drive-strength = <40>;
 			};
 
+			ir_rx_pin: ir-rx-pin {
+				pins = "PH19";
+				function = "ir_rx";
+			};
+
 			i2c0_pins: i2c0-pins {
-				pins = "PI6", "PI7";
+				pins = "PD22", "PD23";
 				function = "i2c0";
 			};
-
-			i2c3_ph_pins: i2c3-ph-pins {
-				pins = "PH4", "PH5";
-				function = "i2c3";
+			i2c1_pins: i2c1-pins {
+				pins = "PH2","PH3";
+				function = "i2c1";
 			};
-
-			ir_rx_pin: ir_rx_pin {
-				pins = "PH10";
-				function = "ir_rx";
+			i2c2_pins: i2c2-pins {
+				pins = "PE1","PE2";
+				function = "i2c1";
+			};
+			i2c3_pins: i2c3-ph-pins {
+				pins = "PE3", "PE4";
+				function = "i2c3";
 			};
 
 			mmc0_pins: mmc0-pins {
@@ -184,31 +191,31 @@
 			};
 
 			mmc2_pins: mmc2-pins {
-				pins = "PC0", "PC1", "PC5", "PC6",
-				       "PC8", "PC9", "PC10", "PC11",
-				       "PC13", "PC14", "PC15", "PC16";
+				pins ="PC0","PC1","PC5","PC6", "PC8",
+					  "PC9","PC10","PC11",
+					  "PC13","PC14","PC15","16";
 				function = "mmc2";
 				drive-strength = <30>;
 				bias-pull-up;
 			};
 
 			spi0_pins: spi0-pins {
-				pins = "PC0", "PC2", "PC3", "PC4";
+				pins = "PC2", "PC3", "PC4","PC7","PC11";
 				function = "spi0";
 			};
 
 			spi1_pins: spi1-pins {
-				pins = "PH6", "PH7", "PH8";
+				pins = "PD11", "PD12","PD13";
 				function = "spi1";
 			};
 
 			spi1_cs_pin: spi1-cs-pin {
-				pins = "PH5";
+				pins = "PD10";
 				function = "spi1";
 			};
 
 			uart0_ph_pins: uart0-ph-pins {
-				pins = "PH0", "PH1";
+				pins = "PB9", "PB10";
 				function = "uart0";
 			};
 
@@ -673,7 +680,7 @@
 		};
 
 		r_pio: pinctrl@7022000 {
-			compatible = "allwinner,sun50i-h616-r-pinctrl";
+			compatible = "allwinner,sun50i-a133-r-pinctrl";
 			reg = <0x07022000 0x400>;
 			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&r_ccu CLK_R_APB1>, <&osc24M>, <&rtc 0>;
@@ -683,9 +690,29 @@
 			interrupt-controller;
 			#interrupt-cells = <3>;
 
-			r_i2c_pins: r-i2c-pins {
+			r_i2c0_pins: r-i2c0-pins {
 				pins = "PL0", "PL1";
-				function = "s_i2c";
+				function = "s_i2c0";
+			};
+
+			r_i2c1_pins: r-i2c1-pins {
+				pins = "PL8", "PL9";
+				function = "s_i2c0";
+			};
+
+			r_uart0_pins:r-uart-pins {
+				pins = "PL2", "PL3";
+				function = "s_uart";
+			};
+
+			r_jtag_pins:r-jtag-pins {
+				pins = "PL4","PL5","PL6","PL7";
+				function = "s_jtag";
+			};
+
+			r_pwm_pins:r-pwm-pins {
+				pins = "PL10";
+				function = "s_pwm";
 			};
 
 			r_rsb_pins: r-rsb-pins {
@@ -709,7 +736,7 @@
 		};
 
 		r_i2c: i2c@7081400 {
-			compatible = "allwinner,sun50i-h616-i2c",
+			compatible = "allwinner,sun50i-a133-i2c",
 				     "allwinner,sun6i-a31-i2c";
 			reg = <0x07081400 0x400>;
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;

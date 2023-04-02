@@ -46,11 +46,29 @@ struct sunxi_mmc {
 	u32 cbda;		/* 0x94 */
 	u32 res2[26];
 #if defined(CONFIG_SUNXI_GEN_SUN6I) || defined(CONFIG_SUN50I_GEN_H6)
+#ifndef CONFIG_MACH_SUN50I_A133
 	u32 res3[17];
 	u32 samp_dl;
 	u32 res4[46];
 #endif
+#endif
+#ifdef CONFIG_MACH_SUN50I_A133
+	u32 thldc;
+	u32 sfc;
+	u32 res4[1];
+	u32 dsbd;
+	u32 res5[12];
+	u32 drv_dl;
+	u32 samp_dl;
+	u32 ds_dl;
+	u32 ntdc;
+	u32 res6[44];
+#endif
 	u32 fifo;		/* 0x100 / 0x200 FIFO access address */
+#ifdef CONFIG_MACH_SUN50I_A133
+	u32 res7[64];
+	u32 vers;
+#endif
 };
 
 #define SUNXI_MMC_CLK_POWERSAVE		(0x1 << 17)
