@@ -74,7 +74,7 @@
 	pinctrl-0 = <&ext_rgmii_pins>;
 	phy-mode = "rgmii";
 	phy-handle = <&ext_rgmii_phy>;
-	phy-supply = <&reg_dcdce>;
+	// phy-supply = <&reg_dcdce>;
 	allwinner,rx-delay-ps = <3100>;
 	allwinner,tx-delay-ps = <700>;
 	status = "okay";
@@ -88,7 +88,6 @@
 };
 
 &mmc0 {
-	// vmmc-supply = <&reg_dcdce>;
 	cd-gpios = <&pio 5 6 GPIO_ACTIVE_LOW>;	/* PF6 */
 	bus-width = <4>;
 	cd-used-24M;
@@ -96,34 +95,38 @@
 	sd-uhs-sdr50;
 	sd-uhs-ddr50;
 	sd-uhs-sdr104;
+	mmc-hs400-1_8v;
+	mmc-hs200-1_8v;
 	no-sdio;
 	no-mmc;
-	// vmmc-supply = <&reg_dcdc1>;
-	// vqmmc33sw-supply = <&reg_dcdc1>;
-	// vdmmc33sw-supply = <&reg_dcdc1>;
-	// vqmmc18sw-supply = <&reg_eldo1>;
-	// vdmmc18sw-supply = <&reg_eldo1>;
-
 	status = "okay";
 };
 
 &mmc1 {
+	// non-removable;
 	bus-width = <4>;
-	no-mmc;
-	no-sd;
- 	cap-sd-highspeed;
-	max-frequency = <50000000>;
+	cap-sd-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	sd-uhs-sdr104;
+	mmc-hs400-1_8v;
+	mmc-hs200-1_8v;
+	no-sdio;
+	// no-mmc;
 	status = "okay";
 };
 
 &mmc2 {
 	non-removable;
 	bus-width = <8>;
-	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
+	// cd-used-24M;
+	cap-sd-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	sd-uhs-sdr104;
 	mmc-hs400-1_8v;
+	mmc-hs200-1_8v;
 	no-sdio;
-	no-sd;
 	status = "okay";
 };
 
@@ -135,15 +138,16 @@
 	status = "okay";
 };
 
-&r_rsb {
+
+&r_i2c0 {
 	status = "okay";
 
-	axp305: pmic@745 {
+	axp707: pmic@1d1 {
 		compatible = "x-powers,axp305", "x-powers,axp805",
 			     "x-powers,axp806";
 		interrupt-controller;
 		#interrupt-cells = <1>;
-		reg = <0x745>;
+		reg = <0x1d1>;
 
 		x-powers,self-working-mode;
 		vina-supply = <&reg_vcc5v>;

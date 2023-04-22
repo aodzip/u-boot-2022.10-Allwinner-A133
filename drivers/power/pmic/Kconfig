@@ -392,3 +392,7 @@ config POWER_MC34VR500
 	The MC34VR500 is used in conjunction with the FSL T1 and LS1 series
 	SoC. It provides 4 buck DC-DC convertors and 5 LDOs, and it is accessed
 	via an I2C interface.
+
+config POWER_AXP717
+	bool "Enable driver for X-Power AXP717"
+	depends on DM_I2C

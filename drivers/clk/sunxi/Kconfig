@@ -96,7 +96,7 @@ config CLK_SUN50I_H6
 
 config CLK_SUN50I_H6_R
 	bool "Clock driver for Allwinner H6 generation PRCM"
-	default SUN50I_GEN_H6 && !MACH_SUN50I_A133
+	default SUN50I_GEN_H6
 	help
 	  This enables common clock driver support for the PRCM
 	  in Allwinner H6/H616 SoCs.

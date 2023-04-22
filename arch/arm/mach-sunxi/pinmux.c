@@ -14,7 +14,7 @@ void sunxi_gpio_set_cfgbank(struct sunxi_gpio *pio, int bank_offset, u32 val)
 	u32 index = GPIO_CFG_INDEX(bank_offset);
 	u32 offset = GPIO_CFG_OFFSET(bank_offset);
 
-	clrsetbits_le32(&pio->cfg[index], 0xf << offset, val << offset);
+	clrsetbits_le32(&pio->cfg[index], 0x7 << offset, val << offset);
 }
 
 void sunxi_gpio_set_cfgpin(u32 pin, u32 val)
