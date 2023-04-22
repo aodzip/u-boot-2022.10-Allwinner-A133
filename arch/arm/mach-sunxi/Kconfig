@@ -371,6 +371,7 @@ config MACH_SUN50I_A133
 	select DRAM_SUN50I_A133
 	select SUN50I_GEN_H6
 	select CLK_SUN50I_H616
+	select AXP_PMIC_BUS
 
 endchoice
 

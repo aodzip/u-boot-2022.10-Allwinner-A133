@@ -201,14 +201,14 @@ static int sunxi_pinctrl_bind(struct udevice *dev)
 	if (ret)
 		return ret;
 
-	for (i = 0; i < desc->num_banks; ++i) {
+	for (i = desc->first_bank; i < desc->num_banks; ++i) {
 		gpio_plat = malloc(sizeof(*gpio_plat));
 		if (!gpio_plat)
 			return -ENOMEM;
 
-		gpio_plat->regs = plat->base + i;
+		gpio_plat->regs = plat->base + (i * 24);
 		gpio_plat->bank_name[0] = 'P';
-		gpio_plat->bank_name[1] = 'A' + desc->first_bank + i;
+		gpio_plat->bank_name[1] = 'A' + i;
 		gpio_plat->bank_name[2] = '\0';
 
 		ret = device_bind(gpio_dev, DM_DRIVER_REF(gpio_sunxi),
@@ -735,7 +735,7 @@ static const struct sunxi_pinctrl_function sun50i_a133_pinctrl_functions[] = {
 	{"i2c3", 2},
 	{"mmc0", 2},
 	{"mmc1", 2},
-	{"mmc2", 2},
+	// {"mmc2", 3},
 	{"spi0", 4},
 	{"spi1", 4},
 	{"uart0", 2},

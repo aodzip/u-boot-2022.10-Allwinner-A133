@@ -652,6 +652,23 @@ static unsigned get_mclk_offset(void)
 	return 0x88;
 };
 
+#ifdef CONFIG_MACH_SUN50I_A133
+static void sunxi_mmc_pinmux(void)
+{
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(0), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(1), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(5), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(6),	3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(8),	3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(9),	3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(10), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(11), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(13), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(14), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(15), 3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(16), 3);
+}
+#endif
 static int sunxi_mmc_probe(struct udevice *dev)
 {
 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
@@ -686,7 +703,17 @@ static int sunxi_mmc_probe(struct udevice *dev)
 		return ret;
 	ccu_reg = (u32 *)(uintptr_t)ofnode_get_addr(args.node);
 
-	priv->mmc_no = ((uintptr_t)priv->reg - SUNXI_MMC0_BASE) / 0x1000;
+	priv->mmc_no = ((uintptr_t)priv->reg - SUNXI_MMC0_BASE);
+
+	if (priv->mmc_no) {
+		priv->mmc_no = priv->mmc_no / 0x1000;
+		#ifdef CONFIG_MACH_SUN50I_A133
+		if (priv->mmc_no == 2) {
+			sunxi_mmc_pinmux();
+		}
+		#endif
+	}
+
 	priv->mclkreg = (void *)ccu_reg + get_mclk_offset() + priv->mmc_no * 4;
 
 	ret = clk_get_by_name(dev, "ahb", &gate_clk);
